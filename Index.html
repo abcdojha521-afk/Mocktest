@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mock Test App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        .question-card {
+            transition: all 0.3s ease;
+            transform: translateY(0);
+        }
+        
+        .question-card.fade-out {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        
+        .question-card.fade-in {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .option-button {
+            transition: all 0.2s ease;
+        }
+        
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .progress-bar {
+            transition: width 0.5s ease;
+        }
+        
+        .result-animation {
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .timer-warning {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">📚 Mock Test App</h1>
+            <p class="text-gray-600">Test your knowledge with our interactive quiz</p>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div class="mb-6">
+                <div class="w-24 h-24 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="text-4xl text-white">🎯</span>
+                </div>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-2">Ready to Start?</h2>
+                <p class="text-gray-600">This test contains 90 multiple choice questions</p>
+            </div>
+            
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 class="font-semibold text-gray-800 mb-2">Test Instructions:</h3>
+                <ul class="text-sm text-gray-600 text-left space-y-1">
+                    <li>• Each question has 4 options</li>
+                    <li>• Select the best answer for each question</li>
+                    <li>• You can review your answers at the end</li>
+                    <li>• Time limit: 60 minutes</li>
+                </ul>
+            </div>
+            
+            <button onclick="startTest()" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200">
+                Start Test
+            </button>
+        </div>
+
+        <!-- Test Screen -->
+        <div id="testScreen" class="hidden">
+            <!-- Progress Bar -->
+            <div class="bg-white rounded-lg p-4 mb-6 shadow-lg">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium text-gray-600">Progress</span>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm font-medium text-gray-600">
+                            <span id="currentQuestion">1</span> / <span id="totalQuestions">90</span>
+                        </span>
+                        <div id="timer" class="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full">
+                            60:00
+                        </div>
+                    </div>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div id="progressBar" class="progress-bar bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full" style="width: 10%"></div>
+                </div>
+            </div>
+
+            <!-- Question Card -->
+            <div id="questionCard" class="question-card bg-white rounded-2xl shadow-xl p-8 mb-6">
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4" id="questionText">
+                        Loading question...
+                    </h3>
+                    <div id="optionsContainer" class="space-y-3">
+                        <!-- Options will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="flex justify-between items-center">
+                <button id="prevBtn" onclick="previousQuestion()" class="bg-gray-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Previous
+                </button>
+                <div class="flex space-x-3">
+                    <button onclick="reviewAnswers()" class="bg-yellow-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors duration-200">
+                        Review
+                    </button>
+                    <button id="nextBtn" onclick="nextQuestion()" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-indigo-700 transition-all duration-200">
+                        Next
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Review Screen -->
+        <div id="reviewScreen" class="hidden">
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">📋 Review Your Answers</h2>
+                <div id="reviewContainer" class="space-y-4 mb-6">
+                    <!-- Review items will be populated by JavaScript -->
+                </div>
+                <div class="flex justify-center space-x-4">
+                    <button onclick="backToTest()" class="bg-gray-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-gray-600 transition-colors duration-200">
+                        Back to Test
+                    </button>
+                    <button onclick="submitTest()" class="bg-green-500 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-600 transition-colors duration-200">
+                        Submit Test
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="hidden">
+            <div class="result-animation bg-white rounded-2xl shadow-xl p-8 text-center">
+                <div class="mb-6">
+                    <div id="resultIcon" class="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-4xl" id="resultEmoji">🎉</span>
+                    </div>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">Test Completed!</h2>
+                    <p class="text-gray-600">Here are your results</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-green-600" id="scorePercentage">0%</div>
+                        <div class="text-sm text-green-700">Overall Score</div>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-blue-600" id="correctAnswers">0</div>
+                        <div class="text-sm text-blue-700">Correct Answers</div>
+                    </div>
+                    <div class="bg-red-50 rounded-lg p-4">
+                        <div class="text-2xl font-bold text-red-600" id="incorrectAnswers">0</div>
+                        <div class="text-sm text-red-700">Incorrect Answers</div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 rounded-lg p-6 mb-6">
+                    <h3 class="font-semibold text-gray-800 mb-4">Detailed Results</h3>
+                    <div id="detailedResults" class="space-y-3">
+                        <!-- Detailed results will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <button onclick="restartTest()" class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200">
+                    Take Test Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test data - 90 General Knowledge Questions
+        let questions = [
+            {
+                question: "What is the capital of France?",
+                options: ["London", "Berlin", "Paris", "Madrid"],
+                correct: 2
+            },
+            {
+                question: "Which planet is known as the Red Planet?",
+                options: ["Venus", "Mars", "Jupiter", "Saturn"],
+                correct: 1
+            },
+            {
+                question: "What is 2 + 2?",
+                options: ["3", "4", "5", "6"],
+                correct: 1
+            },
+            {
+                question: "Who painted the Mona Lisa?",
+                options: ["Van Gogh", "Picasso", "Leonardo da Vinci", "Michelangelo"],
+                correct: 2
+            },
+            {
+                question: "What is the largest ocean on Earth?",
+                options: ["Atlantic", "Indian", "Arctic", "Pacific"],
+                correct: 3
+            },
+            {
+                question: "In which year did World War II end?",
+                options: ["1944", "1945", "1946", "1947"],
+                correct: 1
+            },
+            {
+                question: "What is the chemical symbol for gold?",
+                options: ["Go", "Gd", "Au", "Ag"],
+                correct: 2
+            },
+            {
+                question: "Which is the smallest country in the world?",
+                options: ["Monaco", "Vatican City", "San Marino", "Liechtenstein"],
+                correct: 1
+            },
+            {
+                question: "What is the speed of light?",
+                options: ["300,000 km/s", "150,000 km/s", "450,000 km/s", "600,000 km/s"],
+                correct: 0
+            },
+            {
+                question: "Who wrote 'Romeo and Juliet'?",
+                options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
+                correct: 1
+            },
+            {
+                question: "What is the tallest mountain in the world?",
+                options: ["K2", "Mount Everest", "Kangchenjunga", "Lhotse"],
+                correct: 1
+            },
+            {
+                question: "Which gas makes up most of Earth's atmosphere?",
+                options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Hydrogen"],
+                correct: 2
+            },
+            {
+                question: "Who invented the telephone?",
+                options: ["Thomas Edison", "Alexander Graham Bell", "Nikola Tesla", "Benjamin Franklin"],
+                correct: 1
+            },
+            {
+                question: "What is the currency of Japan?",
+                options: ["Yuan", "Won", "Yen", "Rupee"],
+                correct: 2
+            },
+            {
+                question: "Which continent is the largest?",
+                options: ["Africa", "Asia", "North America", "Europe"],
+                correct: 1
+            },
+            {
+                question: "What is the hardest natural substance?",
+                options: ["Gold", "Iron", "Diamond", "Platinum"],
+                correct: 2
+            },
+            {
+                question: "Who wrote '1984'?",
+                options: ["George Orwell", "Aldous Huxley", "Ray Bradbury", "H.G. Wells"],
+                correct: 0
+            },
+            {
+                question: "What is the largest mammal?",
+                options: ["African Elephant", "Blue Whale", "Giraffe", "Hippopotamus"],
+                correct: 1
+            },
+            {
+                question: "In which year did the Titanic sink?",
+                options: ["1910", "1911", "1912", "1913"],
+                correct: 2
+            },
+            {
+                question: "What is the chemical formula for water?",
+                options: ["H2O", "CO2", "NaCl", "CH4"],
+                correct: 0
+            },
+            {
+                question: "Which country has the most time zones?",
+                options: ["Russia", "USA", "China", "Canada"],
+                correct: 0
+            },
+            {
+                question: "What is the smallest bone in the human body?",
+                options: ["Stapes", "Malleus", "Incus", "Radius"],
+                correct: 0
+            },
+            {
+                question: "Who composed 'The Four Seasons'?",
+                options: ["Mozart", "Bach", "Vivaldi", "Beethoven"],
+                correct: 2
+            },
+            {
+                question: "What is the capital of Australia?",
+                options: ["Sydney", "Melbourne", "Canberra", "Perth"],
+                correct: 2
+            },
+            {
+                question: "Which element has the symbol 'Fe'?",
+                options: ["Fluorine", "Iron", "Francium", "Fermium"],
+                correct: 1
+            },
+            {
+                question: "What is the longest river in the world?",
+                options: ["Amazon", "Nile", "Yangtze", "Mississippi"],
+                correct: 1
+            },
+            {
+                question: "Who painted 'The Starry Night'?",
+                options: ["Pablo Picasso", "Vincent van Gogh", "Claude Monet", "Salvador Dalí"],
+                correct: 1
+            },
+            {
+                question: "What is the largest desert in the world?",
+                options: ["Sahara", "Gobi", "Antarctica", "Arabian"],
+                correct: 2
+            },
+            {
+                question: "Which organ produces insulin?",
+                options: ["Liver", "Kidney", "Pancreas", "Heart"],
+                correct: 2
+            },
+            {
+                question: "What is the fastest land animal?",
+                options: ["Lion", "Cheetah", "Leopard", "Gazelle"],
+                correct: 1
+            },
+            {
+                question: "In which city is the Statue of Liberty located?",
+                options: ["Boston", "Philadelphia", "New York", "Washington D.C."],
+                correct: 2
+            },
+            {
+                question: "What is the study of earthquakes called?",
+                options: ["Geology", "Seismology", "Meteorology", "Oceanography"],
+                correct: 1
+            },
+            {
+                question: "Which planet is closest to the Sun?",
+                options: ["Venus", "Mercury", "Earth", "Mars"],
+                correct: 1
+            },
+            {
+                question: "What is the largest country by land area?",
+                options: ["Canada", "China", "USA", "Russia"],
+                correct: 3
+            },
+            {
+                question: "Who discovered penicillin?",
+                options: ["Marie Curie", "Alexander Fleming", "Louis Pasteur", "Jonas Salk"],
+                correct: 1
+            },
+            {
+                question: "What is the capital of Brazil?",
+                options: ["São Paulo", "Rio de Janeiro", "Brasília", "Salvador"],
+                correct: 2
+            },
+            {
+                question: "Which blood type is known as the universal donor?",
+                options: ["A", "B", "AB", "O"],
+                correct: 3
+            },
+            {
+                question: "What is the smallest planet in our solar system?",
+                options: ["Mercury", "Venus", "Mars", "Pluto"],
+                correct: 0
+            },
+            {
+                question: "Who wrote 'Pride and Prejudice'?",
+                options: ["Charlotte Brontë", "Emily Brontë", "Jane Austen", "George Eliot"],
+                correct: 2
+            },
+            {
+                question: "What is the most abundant gas in the universe?",
+                options: ["Oxygen", "Nitrogen", "Helium", "Hydrogen"],
+                correct: 3
+            },
+            {
+                question: "Which country invented pizza?",
+                options: ["Greece", "Italy", "France", "Spain"],
+                correct: 1
+            },
+            {
+                question: "What is the largest bone in the human body?",
+                options: ["Tibia", "Femur", "Humerus", "Fibula"],
+                correct: 1
+            },
+            {
+                question: "In which year did World War I begin?",
+                options: ["1912", "1913", "1914", "1915"],
+                correct: 2
+            },
+            {
+                question: "What is the chemical symbol for silver?",
+                options: ["Si", "Ag", "Al", "S"],
+                correct: 1
+            },
+            {
+                question: "Which ocean is the smallest?",
+                options: ["Indian", "Atlantic", "Arctic", "Pacific"],
+                correct: 2
+            },
+            {
+                question: "Who invented the light bulb?",
+                options: ["Nikola Tesla", "Thomas Edison", "Benjamin Franklin", "Alexander Bell"],
+                correct: 1
+            },
+            {
+                question: "What is the capital of Egypt?",
+                options: ["Alexandria", "Cairo", "Giza", "Luxor"],
+                correct: 1
+            },
+            {
+                question: "Which vitamin is produced when skin is exposed to sunlight?",
+                options: ["Vitamin A", "Vitamin B", "Vitamin C", "Vitamin D"],
+                correct: 3
+            },
+            {
+                question: "What is the largest island in the world?",
+                options: ["Madagascar", "Greenland", "New Guinea", "Borneo"],
+                correct: 1
+            },
+            {
+                question: "Who composed 'Moonlight Sonata'?",
+                options: ["Mozart", "Chopin", "Beethoven", "Bach"],
+                correct: 2
+            },
+            {
+                question: "What is the most spoken language in the world?",
+                options: ["English", "Spanish", "Mandarin Chinese", "Hindi"],
+                correct: 2
+            },
+            {
+                question: "Which country is known as the Land of the Rising Sun?",
+                options: ["China", "Japan", "South Korea", "Thailand"],
+                correct: 1
+            },
+            {
+                question: "What is the deepest ocean trench?",
+                options: ["Puerto Rico Trench", "Java Trench", "Mariana Trench", "Peru-Chile Trench"],
+                correct: 2
+            },
+            {
+                question: "Who painted 'The Last Supper'?",
+                options: ["Michelangelo", "Leonardo da Vinci", "Raphael", "Donatello"],
+                correct: 1
+            },
+            {
+                question: "What is the largest lake in the world?",
+                options: ["Lake Superior", "Caspian Sea", "Lake Victoria", "Lake Baikal"],
+                correct: 1
+            },
+            {
+                question: "Which metal is liquid at room temperature?",
+                options: ["Lead", "Mercury", "Tin", "Zinc"],
+                correct: 1
+            },
+            {
+                question: "What is the capital of Canada?",
+                options: ["Toronto", "Vancouver", "Montreal", "Ottawa"],
+                correct: 3
+            },
+            {
+                question: "Who developed the theory of relativity?",
+                options: ["Isaac Newton", "Albert Einstein", "Galileo Galilei", "Stephen Hawking"],
+                correct: 1
+            },
+            {
+                question: "What is the largest rainforest in the world?",
+                options: ["Congo Rainforest", "Amazon Rainforest", "Taiga", "Daintree Rainforest"],
+                correct: 1
+            },
+            {
+                question: "Which planet has the most moons?",
+                options: ["Jupiter", "Saturn", "Uranus", "Neptune"],
+                correct: 1
+            },
+            {
+                question: "What is the study of plants called?",
+                options: ["Zoology", "Botany", "Geology", "Astronomy"],
+                correct: 1
+            },
+            {
+                question: "Who wrote 'To Kill a Mockingbird'?",
+                options: ["Harper Lee", "Mark Twain", "John Steinbeck", "William Faulkner"],
+                correct: 0
+            },
+            {
+                question: "What is the hardest rock?",
+                options: ["Granite", "Marble", "Diamond", "Quartz"],
+                correct: 2
+            },
+            {
+                question: "Which country has the longest coastline?",
+                options: ["Russia", "Canada", "Norway", "Chile"],
+                correct: 1
+            },
+            {
+                question: "What is the most abundant element in Earth's crust?",
+                options: ["Silicon", "Aluminum", "Iron", "Oxygen"],
+                correct: 3
+            },
+            {
+                question: "Who invented the World Wide Web?",
+                options: ["Bill Gates", "Steve Jobs", "Tim Berners-Lee", "Mark Zuckerberg"],
+                correct: 2
+            },
+            {
+                question: "What is the capital of Russia?",
+                options: ["St. Petersburg", "Moscow", "Kiev", "Minsk"],
+                correct: 1
+            },
+            {
+                question: "Which animal is known as the 'Ship of the Desert'?",
+                options: ["Horse", "Elephant", "Camel", "Donkey"],
+                correct: 2
+            },
+            {
+                question: "What is the largest waterfall in the world?",
+                options: ["Niagara Falls", "Victoria Falls", "Angel Falls", "Iguazu Falls"],
+                correct: 2
+            },
+            {
+                question: "Who discovered America?",
+                options: ["Vasco da Gama", "Christopher Columbus", "Ferdinand Magellan", "Marco Polo"],
+                correct: 1
+            },
+            {
+                question: "What is the smallest unit of matter?",
+                options: ["Molecule", "Atom", "Electron", "Proton"],
+                correct: 1
+            },
+            {
+                question: "Which country is famous for the Taj Mahal?",
+                options: ["Pakistan", "Bangladesh", "India", "Nepal"],
+                correct: 2
+            },
+            {
+                question: "What is the study of the weather called?",
+                options: ["Geology", "Meteorology", "Astronomy", "Oceanography"],
+                correct: 1
+            },
+            {
+                question: "Who painted 'Girl with a Pearl Earring'?",
+                options: ["Rembrandt", "Johannes Vermeer", "Van Gogh", "Monet"],
+                correct: 1
+            },
+            {
+                question: "What is the largest city in the world by population?",
+                options: ["New York", "Tokyo", "Shanghai", "Mumbai"],
+                correct: 1
+            },
+            {
+                question: "Which instrument measures atmospheric pressure?",
+                options: ["Thermometer", "Barometer", "Hygrometer", "Anemometer"],
+                correct: 1
+            },
+            {
+                question: "What is the currency of the United Kingdom?",
+                options: ["Euro", "Dollar", "Pound Sterling", "Franc"],
+                correct: 2
+            },
+            {
+                question: "Who wrote 'The Great Gatsby'?",
+                options: ["Ernest Hemingway", "F. Scott Fitzgerald", "John Steinbeck", "William Faulkner"],
+                correct: 1
+            },
+            {
+                question: "What is the largest volcano in the world?",
+                options: ["Mount Vesuvius", "Mount Etna", "Mauna Loa", "Mount Fuji"],
+                correct: 2
+            },
+            {
+                question: "Which country invented gunpowder?",
+                options: ["India", "China", "Greece", "Egypt"],
+                correct: 1
+            },
+            {
+                question: "What is the most common blood type?",
+                options: ["A+", "B+", "AB+", "O+"],
+                correct: 3
+            },
+            {
+                question: "Who composed 'The Magic Flute'?",
+                options: ["Bach", "Mozart", "Beethoven", "Handel"],
+                correct: 1
+            },
+            {
+                question: "What is the capital of South Africa?",
+                options: ["Johannesburg", "Cape Town", "Pretoria", "Durban"],
+                correct: 2
+            },
+            {
+                question: "Which planet is known as the 'Evening Star'?",
+                options: ["Mars", "Venus", "Jupiter", "Mercury"],
+                correct: 1
+            },
+            {
+                question: "What is the largest fish in the world?",
+                options: ["Great White Shark", "Whale Shark", "Blue Whale", "Manta Ray"],
+                correct: 1
+            },
+            {
+                question: "Who invented the printing press?",
+                options: ["Johannes Gutenberg", "Leonardo da Vinci", "Benjamin Franklin", "Thomas Edison"],
+                correct: 0
+            },
+            {
+                question: "What is the study of fossils called?",
+                options: ["Archaeology", "Paleontology", "Anthropology", "Geology"],
+                correct: 1
+            },
+            {
+                question: "Which river flows through London?",
+                options: ["Seine", "Rhine", "Thames", "Danube"],
+                correct: 2
+            },
+            {
+                question: "What is the largest bird in the world?",
+                options: ["Eagle", "Albatross", "Ostrich", "Condor"],
+                correct: 2
+            },
+            {
+                question: "Who discovered radioactivity?",
+                options: ["Marie Curie", "Pierre Curie", "Henri Becquerel", "Ernest Rutherford"],
+                correct: 2
+            }
+        ];
+
+        // Function to add new questions dynamically
+        function addQuestion(questionText, optionsArray, correctIndex) {
+            if (!questionText || !optionsArray || optionsArray.length !== 4 || correctIndex < 0 || correctIndex > 3) {
+                console.error('Invalid question format. Please provide question text, 4 options, and correct answer index (0-3)');
+                return false;
+            }
+            
+            questions.push({
+                question: questionText,
+                options: optionsArray,
+                correct: correctIndex
+            });
+            
+            // Update the UI if test hasn't started
+            if (!testStarted) {
+                updateQuestionCount();
+            }
+            
+            return true;
+        }
+
+        // Function to update question count in UI
+        function updateQuestionCount() {
+            const questionCountElements = document.querySelectorAll('[data-question-count]');
+            questionCountElements.forEach(element => {
+                element.textContent = questions.length;
+            });
+            
+            // Update start screen
+            const startScreenDescription = document.querySelector('#startScreen p');
+            if (startScreenDescription) {
+                startScreenDescription.textContent = `This test contains ${questions.length} multiple choice questions`;
+            }
+        }
+
+        // Test state
+        let currentQuestionIndex = 0;
+        let userAnswers = new Array(questions.length).fill(null);
+        let timeLeft = 3600; // 60 minutes in seconds
+        let timerInterval;
+        let testStarted = false;
+
+        // DOM elements
+        const startScreen = document.getElementById('startScreen');
+        const testScreen = document.getElementById('testScreen');
+        const reviewScreen = document.getElementById('reviewScreen');
+        const resultsScreen = document.getElementById('resultsScreen');
+
+        function startTest() {
+            // Validate questions before starting
+            if (!questions || questions.length === 0) {
+                alert('No questions available. Please add questions before starting the test.');
+                return;
+            }
+
+            // Reset user answers array to match questions length
+            userAnswers = new Array(questions.length).fill(null);
+            
+            startScreen.classList.add('hidden');
+            testScreen.classList.remove('hidden');
+            testStarted = true;
+            startTimer();
+            loadQuestion();
+            updateProgress();
+        }
+
+        function startTimer() {
+            const timerElement = document.getElementById('timer');
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeLeft <= 60) {
+                    timerElement.classList.add('timer-warning', 'text-red-600', 'bg-red-50');
+                }
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    submitTest();
+                }
+            }, 1000);
+        }
+
+        function loadQuestion() {
+            // Check if questions array exists and has questions
+            if (!questions || questions.length === 0) {
+                console.error('No questions available');
+                document.getElementById('questionText').textContent = 'No questions available. Please add questions first.';
+                return;
+            }
+
+            // Check if current question index is valid
+            if (currentQuestionIndex >= questions.length) {
+                console.error('Question index out of range');
+                currentQuestionIndex = questions.length - 1;
+            }
+
+            const question = questions[currentQuestionIndex];
+            
+            // Validate question structure
+            if (!question || !question.question || !question.options || !Array.isArray(question.options)) {
+                console.error('Invalid question structure at index:', currentQuestionIndex);
+                document.getElementById('questionText').textContent = 'Error loading question. Please check question format.';
+                return;
+            }
+
+            document.getElementById('questionText').textContent = question.question;
+            
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = `option-button w-full text-left p-4 rounded-lg border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 ${
+                    userAnswers[currentQuestionIndex] === index ? 'border-blue-500 bg-blue-50' : ''
+                }`;
+                button.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="w-6 h-6 rounded-full border-2 border-gray-300 flex items-center justify-center mr-3 ${
+                            userAnswers[currentQuestionIndex] === index ? 'border-blue-500 bg-blue-500' : ''
+                        }">
+                            ${userAnswers[currentQuestionIndex] === index ? '<span class="w-2 h-2 bg-white rounded-full"></span>' : ''}
+                        </span>
+                        <span>${String.fromCharCode(65 + index)}. ${option || 'Option not available'}</span>
+                    </div>
+                `;
+                button.onclick = () => selectAnswer(index);
+                optionsContainer.appendChild(button);
+            });
+            
+            updateNavigationButtons();
+        }
+
+        function selectAnswer(answerIndex) {
+            userAnswers[currentQuestionIndex] = answerIndex;
+            loadQuestion(); // Reload to show selection
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < questions.length - 1) {
+                currentQuestionIndex++;
+                loadQuestion();
+                updateProgress();
+            } else {
+                submitTest();
+            }
+        }
+
+        function previousQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+                updateProgress();
+            }
+        }
+
+        function updateProgress() {
+            document.getElementById('currentQuestion').textContent = currentQuestionIndex + 1;
+            document.getElementById('totalQuestions').textContent = questions.length;
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+            document.getElementById('progressBar').style.width = `${progress}%`;
+        }
+
+        function updateNavigationButtons() {
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            prevBtn.disabled = currentQuestionIndex === 0;
+            nextBtn.textContent = currentQuestionIndex === questions.length - 1 ? 'Submit' : 'Next';
+        }
+
+        function reviewAnswers() {
+            testScreen.classList.add('hidden');
+            reviewScreen.classList.remove('hidden');
+            
+            const reviewContainer = document.getElementById('reviewContainer');
+            reviewContainer.innerHTML = '';
+            
+            questions.forEach((question, index) => {
+                const reviewItem = document.createElement('div');
+                reviewItem.className = 'flex items-center justify-between p-4 bg-gray-50 rounded-lg';
+                
+                const answerStatus = userAnswers[index] !== null ? 'Answered' : 'Not Answered';
+                const statusColor = userAnswers[index] !== null ? 'text-green-600' : 'text-red-600';
+                
+                reviewItem.innerHTML = `
+                    <div>
+                        <span class="font-medium">Question ${index + 1}</span>
+                        <p class="text-sm text-gray-600">${question.question}</p>
+                        ${userAnswers[index] !== null ? 
+                            `<p class="text-sm text-blue-600">Your answer: ${question.options[userAnswers[index]]}</p>` : 
+                            ''
+                        }
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm ${statusColor}">${answerStatus}</span>
+                        <button onclick="goToQuestion(${index})" class="block mt-1 text-blue-500 hover:text-blue-700 text-sm">
+                            Go to Question
+                        </button>
+                    </div>
+                `;
+                reviewContainer.appendChild(reviewItem);
+            });
+        }
+
+        function goToQuestion(questionIndex) {
+            currentQuestionIndex = questionIndex;
+            backToTest();
+        }
+
+        function backToTest() {
+            reviewScreen.classList.add('hidden');
+            testScreen.classList.remove('hidden');
+            loadQuestion();
+            updateProgress();
+        }
+
+        function submitTest() {
+            clearInterval(timerInterval);
+            testScreen.classList.add('hidden');
+            reviewScreen.classList.add('hidden');
+            resultsScreen.classList.remove('hidden');
+            
+            calculateResults();
+        }
+
+        function calculateResults() {
+            let correctCount = 0;
+            let incorrectCount = 0;
+            
+            questions.forEach((question, index) => {
+                if (userAnswers[index] === question.correct) {
+                    correctCount++;
+                } else if (userAnswers[index] !== null) {
+                    incorrectCount++;
+                }
+            });
+            
+            const unanswered = questions.length - correctCount - incorrectCount;
+            const percentage = Math.round((correctCount / questions.length) * 100);
+            
+            // Update result display
+            document.getElementById('scorePercentage').textContent = `${percentage}%`;
+            document.getElementById('correctAnswers').textContent = correctCount;
+            document.getElementById('incorrectAnswers').textContent = incorrectCount + unanswered;
+            
+            // Update result icon based on performance
+            const resultIcon = document.getElementById('resultIcon');
+            const resultEmoji = document.getElementById('resultEmoji');
+            
+            if (percentage >= 80) {
+                resultIcon.className = 'w-24 h-24 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4';
+                resultEmoji.textContent = '🎉';
+            } else if (percentage >= 60) {
+                resultIcon.className = 'w-24 h-24 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mx-auto mb-4';
+                resultEmoji.textContent = '👍';
+            } else {
+                resultIcon.className = 'w-24 h-24 bg-gradient-to-r from-red-400 to-red-600 rounded-full flex items-center justify-center mx-auto mb-4';
+                resultEmoji.textContent = '📚';
+            }
+            
+            // Show detailed results
+            showDetailedResults();
+        }
+
+        function showDetailedResults() {
+            const detailedResults = document.getElementById('detailedResults');
+            detailedResults.innerHTML = '';
+            
+            questions.forEach((question, index) => {
+                const userAnswer = userAnswers[index];
+                const isCorrect = userAnswer === question.correct;
+                const wasAnswered = userAnswer !== null;
+                
+                const resultItem = document.createElement('div');
+                resultItem.className = `p-3 rounded-lg border-l-4 ${
+                    isCorrect ? 'border-green-500 bg-green-50' : 
+                    wasAnswered ? 'border-red-500 bg-red-50' : 'border-gray-500 bg-gray-50'
+                }`;
+                
+                resultItem.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <p class="font-medium text-sm">Q${index + 1}: ${question.question}</p>
+                            <p class="text-xs text-gray-600 mt-1">
+                                Correct: ${question.options[question.correct]}
+                            </p>
+                            ${wasAnswered ? 
+                                `<p class="text-xs mt-1 ${isCorrect ? 'text-green-600' : 'text-red-600'}">
+                                    Your answer: ${question.options[userAnswer]}
+                                </p>` : 
+                                '<p class="text-xs text-gray-500 mt-1">Not answered</p>'
+                            }
+                        </div>
+                        <span class="text-lg">
+                            ${isCorrect ? '✅' : wasAnswered ? '❌' : '⚪'}
+                        </span>
+                    </div>
+                `;
+                detailedResults.appendChild(resultItem);
+            });
+        }
+
+        function restartTest() {
+            // Reset all state
+            currentQuestionIndex = 0;
+            userAnswers = new Array(questions.length).fill(null);
+            timeLeft = 600;
+            testStarted = false;
+            
+            // Reset timer display
+            document.getElementById('timer').className = 'text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full';
+            document.getElementById('timer').textContent = '60:00';
+            
+            // Show start screen
+            resultsScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            updateNavigationButtons();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96d50e5403b73fba',t:'MTc1NDg4NzIzOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
